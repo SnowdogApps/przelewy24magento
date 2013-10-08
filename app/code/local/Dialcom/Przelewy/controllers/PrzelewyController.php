@@ -92,6 +92,30 @@ class Dialcom_Przelewy_PrzelewyController extends Mage_Core_Controller_Front_Act
 
 		//	$order->getPayment()->addTransaction(Mage_Sales_Model_Order_Payment_Transaction::TYPE_ORDER);
 		//	$order->addPayment(Mage_Sales_Model_Order_Payment::REVIEW_ACTION_ACCEPT, $order->getPayment());
+
+            //create invoice
+            try {
+                if(!$order->canInvoice())
+                {
+                    Mage::throwException(Mage::helper('core')->__('Cannot create an invoice.'));
+                }
+                $invoice = Mage::getModel('sales/service_order', $order)->prepareInvoice();
+                if (!$invoice->getTotalQty()) {
+                    Mage::throwException(Mage::helper('core')->__('Cannot create an invoice without products.'));
+                }
+                $invoice->setRequestedCaptureCase(Mage_Sales_Model_Order_Invoice::CAPTURE_ONLINE);
+                $invoice->register();
+                $transactionSave = Mage::getModel('core/resource_transaction')
+                    ->addObject($invoice)
+                    ->addObject($invoice->getOrder());
+                $transactionSave->save();
+            }
+            catch (Mage_Core_Exception $e) {
+            }
+            //$order->setState(Mage_Sales_Model_Order::STATE_COMPLETE, true);
+
+
+
 			$order->save();
 		
 			$session = Mage::getSingleton('checkout/session');
